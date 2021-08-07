@@ -101,8 +101,33 @@ def split_messages(update, context):
 
 def done(update, context):
     user_id = update.message.from_user.id
+    url = f"{context.user_data[user_id]}"
+    chrome_options = Options()
+    chrome_options.add_argument("--user-data-dir=chrome-data")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
+    driver.get(url)
+    time.sleep(5)
+    dt=datetime.datetime.now().strftime("%Y%m%d%H%M")
+    height = driver.execute_script("return document.documentElement.scrollHeight")
+    lastheight = 0
+
+    while True:
+        if lastheight == height:
+            break
+        lastheight = height
+        driver.execute_script("window.scrollTo(0, " + str(height) + ");")
+        time.sleep(2)
+        height = driver.execute_script("return document.documentElement.scrollHeight")
+
+    user_data = driver.find_elements_by_xpath('//*[@id="video-title"]')
+    for i in user_data:
+        result = i.get_attribute('href')
     try:
-        data = context.user_data[user_id]
+        data = result
         message_id = uuid4()
         db.insert({'message_id': str(message_id), 'text': data})
         text = "\n".join([i.split(': ', 1)[1] for i in data])
