@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os, unittest, time, datetime
+import urllib.request, urllib.error, urllib.parse
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import InvalidArgumentException
+from selenium.webdriver.chrome.options import Options
 import json
-import os
 import re
 import time
 import urllib.parse
@@ -32,12 +39,38 @@ def send_help(update, context):
 
 
 def store_forwarded_message(update, context):
+    url = f"{update.message.text_html}"
+    chrome_options = Options()
+    chrome_options.add_argument("--user-data-dir=chrome-data")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
+    driver.get(url)
+    time.sleep(5)
+    dt=datetime.datetime.now().strftime("%Y%m%d%H%M")
+    height = driver.execute_script("return document.documentElement.scrollHeight")
+    lastheight = 0
+
+    while True:
+        if lastheight == height:
+            break
+        lastheight = height
+        driver.execute_script("window.scrollTo(0, " + str(height) + ");")
+        time.sleep(2)
+        height = driver.execute_script("return document.documentElement.scrollHeight")
+
+    user_data = driver.find_elements_by_xpath('//*[@id="video-title"]')
+    for i in user_data:
+        result = i.get_attribute('href')
+           
     user_id = update.message.from_user.id
     try:
         first_name = update.message.forward_from.first_name + ': '
     except AttributeError:
         first_name = "HiddenUser: "
-    text = first_name + update.message.text_html
+    text = first_name + result
     scheme = [text]
     context.user_data.setdefault(user_id, []).extend(scheme)
 
