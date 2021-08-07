@@ -3,3 +3,5 @@ logzero
 tinydb
 bs4
 six
+urllib3
+selenium
